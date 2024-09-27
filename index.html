@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ISS Tracker</title>
+    <script>
+        async function getISSPosition() {
+            try {
+                const response = await fetch('http://api.open-notify.org/iss-now.json');
+                const data = await response.json();
+                
+                if (data.message === 'success') {
+                    const lat = data.iss_position.latitude;
+                    const lon = data.iss_position.longitude;
+                    document.getElementById('position').innerText = `Latitude: ${lat}, Longitude: ${lon}`;
+
+                    // Get the human-readable location using Nominatim with English language
+                    const locationResponse = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}&accept-language=en`);
+                    const locationData = await locationResponse.json();
+                    
+                    const location = locationData.address ? locationData.address.country : 'n/a. The ISS is probably over the ocean.';
+                    document.getElementById('location').innerText = `Location: ${location}`;
+                } else {
+                    document.getElementById('position').innerText = 'An error occurred. Could not load information';
+                    document.getElementById('location').innerText = 'Location not available; check troubleshooting and wait for better signal.';
+                }
+            } catch (error) {
+                document.getElementById('position').innerText = 'Sorry. Could not access server.';
+                document.getElementById('location').innerText = 'Location not available.';
+            }
+        }
+
+        async function checkConnection() {
+            const timeout = new Promise((_, reject) =>
+                setTimeout(() => reject(new Error("timeout")), 1000) // 1 second timeout
+            );
+
+            const request = fetch('https://www.google.com/', { method: 'HEAD', mode: 'no-cors' });
+
+            try {
+                await Promise.race([request, timeout]);
+                // If the fetch is successful, reload the page
+                window.location.reload();
+            } catch (error) {
+                // If fetch fails or times out, show not connected message
+                document.querySelector('.not-connected').style.display = 'block';
+            }
+        }
+
+        window.onload = () => {
+            getISSPosition();
+            setInterval(getISSPosition, 1000); // Update every second
+            
+            // Check connection when troubleshooting text is clicked
+            document.getElementById('troubleshooting').onclick = checkConnection;
+        };
+    </script>
+    <style>
+      body {
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        align-items: center;
+        font-family: Arial, Helvetica, sans-serif;
+        text-align: center;
+        padding: 0;
+        margin: 0;
+        background-color: #06080c;
+        color: white;
+      }
+        p {
+            font-size: 4rem;
+        }
+        #position {
+          animation: text 2.5s infinite both;
+        }
+        #location {
+          animation: text 10s infinite both;
+        }
+        h1 {
+          
+        }
+        video {
+          filter: blur(12px);
+          filter: brightness(.15);
+          position: fixed;
+          width: 105vw;
+          height: 105vh;
+          object-fit: cover;
+          z-index: -1;
+        }
+
+        .not-connected {
+          display: none; /* Initially hidden */
+          font-size: 2rem;
+          color: rgba(0, 102, 255);
+          background-color: black;
+          box-shadow: 0 0 24px rgba(0, 102, 255, 0.541);
+          border-radius: 44px;
+          padding: 16px;
+        }
+
+        #troubleshooting {
+          cursor: pointer;
+          font-size: 1.5rem;
+          margin-top: 20px;
+          color: rgba(173, 216, 230, 0.589);
+          position: fixed;
+          bottom: 2rem;
+        }
+
+@keyframes text {
+  0% {opacity: 1; translate: 0 0;}
+  50% {opacity: .7; translate: 0 4px; rotate: .5deg;}
+}
+    </style>
+</head>
+<body>
+  <video class="bg" id="bg" src="earth-pixabay.mp4" autoplay loop></video>
+    <h1>ISS Tracker</h1>
+    <p id="position">Loading position ....</p>
+    <p id="location">Loading location ....</p>
+    <div id="troubleshooting">Troubleshooting</div> <!-- Added troubleshooting text -->
+    <div class="not-connected">You're not connected to the internet.</div> <!-- Not connected message -->
+</body>
+</html>
